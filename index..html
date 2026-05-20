@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Syntax Error Dungeon - シンタックスエラー迷宮</title>
+<style>
+  :root{
+    --bg:#090b13;
+    --panel:#121729;
+    --panel2:#1a2140;
+    --text:#eef2ff;
+    --muted:#a8b3d9;
+    --accent:#7c5cff;
+    --accent2:#00e0ff;
+    --danger:#ff4d6d;
+    --ok:#3cff9b;
+    --warn:#ffd166;
+    --shadow:0 20px 60px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    min-height:100vh;
+    color:var(--text);
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(124,92,255,.25), transparent 35%),
+      radial-gradient(circle at 80% 0%, rgba(0,224,255,.17), transparent 30%),
+      linear-gradient(135deg,#070812,#111827);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+  }
+  .game{
+    width:min(1120px,100%);
+    background:rgba(18,23,41,.88);
+    border:1px solid rgba(255,255,255,.11);
+    border-radius:28px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    backdrop-filter:blur(14px);
+  }
+  header{
+    padding:24px 26px;
+    background:linear-gradient(90deg,rgba(124,92,255,.35),rgba(0,224,255,.18));
+    border-bottom:1px solid rgba(255,255,255,.1);
+    display:flex;
+    gap:18px;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  h1{margin:0;font-size:clamp(24px,4vw,42px);letter-spacing:.04em}
+  .subtitle{color:var(--muted);margin-top:6px;font-size:14px}
+  .status{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .pill{
+    padding:9px 13px;
+    border-radius:999px;
+    background:rgba(255,255,255,.09);
+    border:1px solid rgba(255,255,255,.12);
+    font-weight:700;
+    font-size:14px;
+  }
+  main{padding:22px}
+  .grid{
+    display:grid;
+    grid-template-columns:1.1fr .9fr;
+    gap:18px;
+  }
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .card{
+    background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:24px;
+    padding:20px;
+  }
+  .stage-title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:#fff;
+    margin:0 0 14px;
+  }
+  .badge{
+    font-size:12px;
+    padding:5px 9px;
+    border-radius:999px;
+    background:rgba(124,92,255,.28);
+    border:1px solid rgba(124,92,255,.48);
+    color:#dcd6ff;
+  }
+  pre{
+    margin:0;
+    overflow:auto;
+    white-space:pre;
+    line-height:1.55;
+    font-size:14px;
+    border-radius:18px;
+    padding:18px;
+    background:#050711;
+    color:#d7e1ff;
+    border:1px solid rgba(255,255,255,.12);
+    box-shadow:inset 0 0 30px rgba(124,92,255,.06);
+  }
+  code{font-family:"Consolas","Menlo","Monaco",monospace}
+  .question{
+    margin:16px 0 10px;
+    color:#f8fbff;
+    font-size:18px;
+    font-weight:800;
+  }
+  .choices{
+    display:grid;
+    gap:10px;
+    margin-top:12px;
+  }
+  button{
+    cursor:pointer;
+    border:none;
+    color:var(--text);
+    border-radius:16px;
+    padding:13px 15px;
+    font-weight:800;
+    background:linear-gradient(135deg,rgba(124,92,255,.9),rgba(0,224,255,.55));
+    box-shadow:0 10px 26px rgba(0,0,0,.25);
+    transition:.14s transform,.14s filter,.14s background;
+  }
+  button:hover{transform:translateY(-1px);filter:brightness(1.08)}
+  button:disabled{opacity:.55;cursor:not-allowed;transform:none}
+  .choice{
+    text-align:left;
+    background:rgba(255,255,255,.07);
+    border:1px solid rgba(255,255,255,.12);
+    box-shadow:none;
+  }
+  .choice:hover{background:rgba(255,255,255,.12)}
+  .choice.correct{background:rgba(60,255,155,.18);border-color:rgba(60,255,155,.8)}
+  .choice.wrong{background:rgba(255,77,109,.18);border-color:rgba(255,77,109,.8)}
+  .feedback{
+    min-height:96px;
+    margin-top:14px;
+    padding:15px;
+    border-radius:18px;
+    background:rgba(0,0,0,.18);
+    border:1px dashed rgba(255,255,255,.18);
+    color:var(--muted);
+    line-height:1.6;
+  }
+  .feedback strong{color:#fff}
+  .side h2{margin:0 0 12px;font-size:20px}
+  .meter{
+    height:14px;
+    background:rgba(255,255,255,.08);
+    border-radius:999px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.11);
+  }
+  .bar{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    transition:.25s;
+  }
+  .log{
+    margin-top:14px;
+    max-height:250px;
+    overflow:auto;
+    padding-right:4px;
+  }
+  .log div{
+    padding:9px 10px;
+    margin-bottom:8px;
+    border-radius:12px;
+    background:rgba(255,255,255,.055);
+    color:var(--muted);
+    font-size:13px;
+  }
+  .start{
+    text-align:center;
+    padding:30px 20px;
+  }
+  .start p{color:var(--muted);line-height:1.8}
+  .big{
+    font-size:18px;
+    padding:15px 22px;
+  }
+  .hidden{display:none}
+  .result{
+    text-align:center;
+    padding:26px;
+  }
+  .rank{
+    font-size:clamp(30px,6vw,58px);
+    font-weight:1000;
+    margin:10px 0;
+    background:linear-gradient(90deg,#fff,#92f5ff,#c3b8ff);
+    -webkit-background-clip:text;
+    color:transparent;
+  }
+  .mini{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:10px;
+  }
+  .typing{
+    color:var(--warn);
+    font-family:Consolas,monospace;
+  }
+</style>
+</head>
+<body>
+<div class="game">
+  <header>
+    <div>
+      <h1>Syntax Error Dungeon</h1>
+      <div class="subtitle">読めそうで読めないコードの罠を見抜け。文法迷宮・全10問。</div>
+    </div>
+    <div class="status">
+      <div class="pill">STAGE <span id="stage">0</span>/10</div>
+      <div class="pill">SCORE <span id="score">0</span></div>
+      <div class="pill">LIFE <span id="life">3</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="startScreen" class="start card">
+      <h2>ようこそ、構文崩壊の地下迷宮へ</h2>
+      <p>
+        表示されるコードには、実行以前にパーサーが倒れるレベルの文法的な罠があります。<br>
+        「どこがSyntax Errorなのか」を選んでください。<br>
+        似たような選択肢が混ざっているので、雰囲気で選ぶと即死します。
+      </p>
+      <button class="big" onclick="startGame()">デバッグを開始する</button>
+      <div class="mini">※ブラウザだけで動きます。スマホでもPCでもOK。</div>
+    </section>
+
+    <section id="playScreen" class="hidden">
+      <div class="grid">
+        <div class="card">
+          <h2 class="stage-title">
+            <span id="category">JavaScript</span>
+            <span class="badge" id="difficulty">難度: 狂</span>
+          </h2>
+          <pre><code id="codeBox"></code></pre>
+          <div class="question" id="question"></div>
+          <div class="choices" id="choices"></div>
+          <div class="feedback" id="feedback">選択肢を選ぶと解析ログが出ます。</div>
+        </div>
+
+        <aside class="card side">
+          <h2>Parser Integrity</h2>
+          <div class="meter"><div class="bar" id="bar"></div></div>
+          <p id="hintText" class="typing">awaiting_input...</p>
+          <button id="nextBtn" onclick="nextQuestion()" disabled>次のコードへ</button>
+          <button onclick="restartGame()" style="margin-top:10px;background:rgba(255,255,255,.09);box-shadow:none;">最初から</button>
+          <div class="log" id="log"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="hidden result card">
+      <h2>解析完了</h2>
+      <div class="rank" id="rank"></div>
+      <p id="resultText"></p>
+      <button class="big" onclick="restartGame()">もう一度潜る</button>
+    </section>
+  </main>
+</div>
+
+<script>
+const questions = [
+  {
+    category:"JavaScript / object literal",
+    difficulty:"難度: 入門の皮を被った罠",
+    code:`const hero = {
+  name: "Debugger",
+  level: 7
+  skill: "semicolon slash"
+};
+
+console.log(hero.skill);`,
+    q:"このコードがSyntax Errorになる直接原因は？",
+    choices:[
+      "levelプロパティの後ろにカンマが無い",
+      "console.logの末尾にセミコロンがある",
+      "skillという名前が予約語に近い",
+      "オブジェクトリテラル内で文字列を使っている",
+      "constにオブジェクトを代入している"
+    ],
+    a:0,
+    explain:"オブジェクトリテラルでは各プロパティをカンマで区切ります。level: 7 の後ろに , が無いため、次の skill を読めずに構文崩壊します。"
+  },
+  {
+    category:"JavaScript / template literal",
+    difficulty:"難度: バッククォート地獄",
+    code:`const name = "Syntax";
+const msg = \`Hello, \${name}" ;
+console.log(msg);`,
+    q:"パーサーが迷子になる理由は？",
+    choices:[
+      "テンプレートリテラルを開始したバッククォートが閉じられていない",
+      "${name} の中に name を書くのは文法違反",
+      "const msg に文字列を代入してはいけない",
+      "Hello の後ろのカンマが不要",
+      "console.log はテンプレートリテラルを出力できない"
+    ],
+    a:0,
+    explain:"` で始めたテンプレートリテラルは ` で閉じる必要があります。ここでは最後がダブルクォートになっているため閉じられていません。"
+  },
+  {
+    category:"JavaScript / destructuring",
+    difficulty:"難度: ぱっと見正常",
+    code:`const user = { id: 10, name: "Ada" };
+
+const { id, name: } = user;
+
+console.log(id);`,
+    q:"分割代入として致命的なのはどこ？",
+    choices:[
+      "name: の右側に新しい変数名が無い",
+      "id と name を同時に取り出している",
+      "userがconstなので分割代入できない",
+      "console.log(id) は分割代入後には禁止",
+      "Adaが予約語扱いになる"
+    ],
+    a:0,
+    explain:"{ name: alias } のように、コロンの右には受け取り先の変数名が必要です。name: で止まると構文として成立しません。"
+  },
+  {
+    category:"HTML / attribute quote",
+    difficulty:"難度: UI破壊型",
+    code:`<button onclick="alert('start)>開始</button>
+
+<script>
+  console.log("ready");
+<\/script>`,
+    q:"HTMLとして最も危険な構文ミスは？",
+    choices:[
+      "onclick属性のダブルクォート内で、JavaScript文字列のシングルクォートが閉じていない",
+      "buttonタグにonclickを書くこと自体が禁止",
+      "scriptタグ内にconsole.logを書くとHTMLエラー",
+      "buttonの文字が日本語なのでエラー",
+      "alertはHTML属性から呼べない"
+    ],
+    a:0,
+    explain:"onclick=\"...\" の中で alert('start) と書いており、' が閉じていません。属性・JS文字列・HTMLタグが連鎖的に崩れます。"
+  },
+  {
+    category:"CSS / selector block",
+    difficulty:"難度: 見落とし誘発",
+    code:`.card {
+  color: white;
+  background: #111;
+
+.button {
+  border-radius: 12px;
+}`,
+    q:"CSSパーサー的に何がまずい？",
+    choices:[
+      ".card の閉じ波カッコ } が無いまま .button が始まっている",
+      "backgroundに#111を使うのは無効",
+      ".buttonというクラス名は予約されている",
+      "border-radiusはpxで指定できない",
+      "whiteはCSSの色名ではない"
+    ],
+    a:0,
+    explain:".card ブロックを閉じないまま .button セレクタを書いています。CSSではブロック境界が崩れると後続の解釈も狂います。"
+  },
+  {
+    category:"JavaScript / arrow function",
+    difficulty:"難度: 省略記法の裏切り",
+    code:`const calc = (a, b => {
+  return a + b;
+};
+
+console.log(calc(2, 3));`,
+    q:"arrow functionとして成立していない理由は？",
+    choices:[
+      "引数リストの閉じカッコ ) が足りない",
+      "returnはアロー関数では使えない",
+      "a + b の + がSyntax Error",
+      "calcという変数名が関数に使えない",
+      "console.logで関数呼び出しはできない"
+    ],
+    a:0,
+    explain:"(a, b => { となっており、引数リストを閉じる ) がありません。正しくは const calc = (a, b) => { ... } です。"
+  },
+  {
+    category:"JavaScript / class",
+    difficulty:"難度: OOP系トラップ",
+    code:`class Pump {
+  constructor(flow) {
+    this.flow = flow;
+  }
+
+  run() {
+    return this.flow;
+  };
+
+  stop() {
+    return 0;
+  }
+}`,
+    q:"この中で本当にSyntax Errorとして問題になる可能性が高い箇所は？",
+    choices:[
+      "実はこのコード自体はJavaScriptのclass文法としては基本的に構文エラーではない",
+      "class名のPumpが大文字なのでエラー",
+      "constructorの引数が1個なのでエラー",
+      "メソッド内でreturnを使っているのでエラー",
+      "this.flowへの代入が禁止"
+    ],
+    a:0,
+    explain:"これは意地悪問題です。class内のメソッド後に ; があっても通常は構文エラーになりません。Syntax Errorっぽいが実は違う罠です。"
+  },
+  {
+    category:"JSON / strict grammar",
+    difficulty:"難度: JSとの違い",
+    code:`{
+  name: "Debugger",
+  "level": 99,
+  "skills": ["parse", "lint",],
+}`,
+    q:"JSONとして見た場合、構文的に正しくない点の組み合わせは？",
+    choices:[
+      "nameキーがダブルクォートされておらず、末尾カンマもある",
+      "levelが数値なのでエラー",
+      "配列の中に文字列があるのでエラー",
+      "Debuggerという文字列が長すぎる",
+      "JSONでは改行が一切禁止"
+    ],
+    a:0,
+    explain:"JSONはJavaScriptのオブジェクトリテラルより厳格です。キーはダブルクォート必須で、配列・オブジェクト末尾のカンマも不可です。"
+  },
+  {
+    category:"JavaScript / optional chaining",
+    difficulty:"難度: 新しめ文法",
+    code:`const obj = null;
+
+obj?. = 3;
+
+console.log(obj);`,
+    q:"optional chaining周辺で何が破綻している？",
+    choices:[
+      "obj?. の後にプロパティ名や呼び出しが無く、代入先としても不正",
+      "nullをconstに入れるのはSyntax Error",
+      "optional chainingはconsole.logと併用できない",
+      "?. は必ずif文の中でしか使えない",
+      "数字の3を代入することが禁止"
+    ],
+    a:0,
+    explain:"?. は obj?.prop や obj?.method() のように使います。obj?. = 3 はチェーン先が無く、しかも代入対象としても成立しません。"
+  },
+  {
+    category:"JavaScript / regex literal",
+    difficulty:"難度: スラッシュ幻覚",
+    code:`const pattern = /syntax(error/gi;
+
+console.log(pattern.test("syntaxerror"));`,
+    q:"正規表現リテラルとしての構文問題は？",
+    choices:[
+      "正規表現内の丸カッコ ( が閉じていない",
+      "giフラグを2文字同時に使っている",
+      "patternという変数名が予約語",
+      "testメソッドは正規表現に存在しない",
+      "文字列内にsyntaxerrorがある"
+    ],
+    a:0,
+    explain:"/syntax(error/gi は正規表現として ( が閉じていません。JavaScriptのコード構文ではなく、正規表現リテラル内部の構文で落ちます。"
+  }
+];
+
+let index = 0;
+let score = 0;
+let life = 3;
+let answered = false;
+
+function $(id){ return document.getElementById(id); }
+
+function startGame(){
+  index = 0;
+  score = 0;
+  life = 3;
+  answered = false;
+  $("startScreen").classList.add("hidden");
+  $("resultScreen").classList.add("hidden");
+  $("playScreen").classList.remove("hidden");
+  $("log").innerHTML = "";
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const item = questions[index];
+  answered = false;
+  $("stage").textContent = index + 1;
+  $("score").textContent = score;
+  $("life").textContent = life;
+  $("category").textContent = item.category;
+  $("difficulty").textContent = item.difficulty;
+  $("codeBox").textContent = item.code;
+  $("question").textContent = item.q;
+  $("feedback").textContent = "選択肢を選ぶと解析ログが出ます。";
+  $("hintText").textContent = "parser_state: unstable / token_scan_required";
+  $("nextBtn").disabled = true;
+  $("bar").style.width = ((index) / questions.length * 100) + "%";
+
+  const choices = $("choices");
+  choices.innerHTML = "";
+  item.choices.forEach((text, i) => {
+    const btn = document.createElement("button");
+    btn.className = "choice";
+    btn.textContent = String.fromCharCode(65+i) + ". " + text;
+    btn.onclick = () => answer(i, btn);
+    choices.appendChild(btn);
+  });
+}
+
+function answer(choiceIndex, btn){
+  if(answered) return;
+  answered = true;
+  const item = questions[index];
+  const all = document.querySelectorAll(".choice");
+
+  all.forEach((b, i) => {
+    b.disabled = true;
+    if(i === item.a) b.classList.add("correct");
+  });
+
+  if(choiceIndex === item.a){
+    score += 100 + Math.max(0, life - 1) * 15;
+    btn.classList.add("correct");
+    $("feedback").innerHTML = "<strong>正解。</strong><br>" + item.explain;
+    $("hintText").textContent = "parser_state: recovered / syntax_patch_success";
+    addLog("STAGE " + (index+1) + "：修復成功 +" + (100 + Math.max(0, life - 1) * 15));
+  } else {
+    life--;
+    btn.classList.add("wrong");
+    $("feedback").innerHTML = "<strong>不正解。</strong><br>正解は「" + item.choices[item.a] + "」。<br>" + item.explain;
+    $("hintText").textContent = "parser_state: damaged / stack_trace_smells_burnt";
+    addLog("STAGE " + (index+1) + "：誤診断 LIFE-1");
+  }
+
+  $("score").textContent = score;
+  $("life").textContent = life;
+  $("nextBtn").disabled = false;
+
+  if(life <= 0){
+    $("nextBtn").textContent = "結果を見る";
+  } else {
+    $("nextBtn").textContent = index === questions.length-1 ? "結果を見る" : "次のコードへ";
+  }
+}
+
+function addLog(text){
+  const div = document.createElement("div");
+  div.textContent = text;
+  $("log").prepend(div);
+}
+
+function nextQuestion(){
+  if(life <= 0 || index >= questions.length - 1){
+    showResult();
+    return;
+  }
+  index++;
+  renderQuestion();
+}
+
+function showResult(){
+  $("playScreen").classList.add("hidden");
+  $("resultScreen").classList.remove("hidden");
+  $("bar").style.width = "100%";
+
+  const max = questions.length * 130;
+  const rate = score / max;
+  let rank, text;
+  if(rate >= .9){
+    rank = "S級 パーサー司祭";
+    text = "もはやエラー文を見る前に原因が見えているレベルです。ブラウザ開発者ツールがあなたに敬語を使います。";
+  } else if(rate >= .7){
+    rank = "A級 構文修復士";
+    text = "かなり強いです。カッコ、クォート、JSON、正規表現の罠を実戦レベルで見抜けています。";
+  } else if(rate >= .45){
+    rank = "B級 セミコロン冒険者";
+    text = "雰囲気ではなく、構文単位で見る力が育っています。次はJSONとJSの違いを重点攻略です。";
+  } else {
+    rank = "C級 console.log信者";
+    text = "まだ迷宮に飲まれています。ただしSyntax Errorは『読めない場所』を潰せば必ず倒せます。";
+  }
+
+  $("rank").textContent = rank;
+  $("resultText").textContent = "最終スコア：" + score + " / 推定最大 " + max + "。 " + text;
+}
+
+function restartGame(){
+  $("nextBtn").textContent = "次のコードへ";
+  startGame();
+}
+</script>
+</body>
+</html>
